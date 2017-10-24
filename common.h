@@ -17,7 +17,9 @@ cpp_int rand(int n) {
   for (size_t i = 0; i != k; ++i) {
     number.push_back(hex[distribution(rd)]);
   }
-  return cpp_int(number);
+  auto res = cpp_int(number);
+  if (res < 0) return -res;
+  return res;
 }
 
 template<typename E>
