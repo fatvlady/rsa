@@ -267,11 +267,9 @@ struct rsa_keychain {
   }
 };
 
-template <size_t Width, typename RandomGenerator>
-rsa_keychain rsa_key_generation(RandomGenerator& rng) {
+template <typename ProbeGenerator, typename WitnessGenerator>
+rsa_keychain rsa_key_generation(ProbeGenerator& p_generator, WitnessGenerator& w_generator) {
   typedef cpp_int Integer;
-  bit_generator<RandomGenerator, Width> p_generator(rng);
-  bit_generator<RandomGenerator, Width> w_generator(rng);
   while(true) {
   Integer p1 = probable_prime(p_generator, w_generator);
   Integer p2 = probable_prime(p_generator, w_generator);
@@ -316,8 +314,9 @@ cpp_int crypt(cpp_int val, cpp_int n, cpp_int key) {
 }
 
 int main() {
-  boost::mt19937 rng(42);
-  auto rsa_triple = rsa_key_generation<512>(rng);
+  //boost::mt19937 rng(42);
+  bit_generator<std::random_device, 512> probe_generator, witness_generator;
+  auto rsa_triple = rsa_key_generation(probe_generator, witness_generator);
   cpp_int value = 65;
   auto encrypted = crypt(value, rsa_triple.n, rsa_triple.public_key);
   auto decrypted = crypt(encrypted, rsa_triple.n, rsa_triple.private_key);
