@@ -5,8 +5,19 @@
 #include <string>
 #include <random>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <boost/random.hpp>
 
 using boost::multiprecision::cpp_int;
+template <typename Rng, size_t BitCount>
+using bit_generator = boost::random::independent_bits_engine<Rng, BitCount, cpp_int>;
+
+template <size_t BitCount, typename Rng>
+cpp_int rand(const Rng& rng)
+{
+    bit_generator<Rng, BitCount> ind_bit_gen(rng);
+    return ind_bit_gen();
+}
+
 cpp_int rand(int n) {
   const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
   std::random_device rd;
@@ -200,7 +211,7 @@ N stein_gcd(N m, N n) {
 
 template<typename Integer, typename RandomGenerator>
 inline
-Integer random_coprime(Integer x, RandomGenerator rand) {
+Integer random_coprime(Integer x, RandomGenerator& rand) {
   Integer number = rand();
   while (number == 0) number = rand();
 
@@ -212,8 +223,8 @@ Integer random_coprime(Integer x, RandomGenerator rand) {
   return number;
 }
 
-template<typename Integer, typename RandomGenerator>
-bool check_primarity(Integer n, RandomGenerator rand) {
+template<typename Integer, typename ProbeGenerator>
+bool check_primarity(Integer n, ProbeGenerator& rand) {
   if (even(n)) { return false; }
   
   std::pair<Integer, Integer> qk = factorize(Integer{n - 1}, Integer{2});
@@ -228,8 +239,8 @@ bool check_primarity(Integer n, RandomGenerator rand) {
   return true;
 }
 
-template<typename PrimarityTest, typename RandomGenerator, typename WitnessGenerator>
-auto probable_prime(PrimarityTest primarity_test, RandomGenerator rand, WitnessGenerator rand_wintness) {
+template<typename PrimarityTest, typename ProbeGenerator, typename WitnessGenerator>
+auto probable_prime(PrimarityTest primarity_test, ProbeGenerator& rand, WitnessGenerator& rand_wintness) {
   auto x = rand();
   while (!primarity_test(x, rand_wintness))  {
     x = rand();
@@ -237,12 +248,9 @@ auto probable_prime(PrimarityTest primarity_test, RandomGenerator rand, WitnessG
   return x;
 }
 
-template<typename Integer>
-auto probable_prime(Integer n1, Integer n2) {
-  return probable_prime([](const auto &x, const auto rnd) { return check_primarity(x, rnd); },
-                        [n1]() { return rand(n1); },
-                        [n2]() { return rand(n2); });
-
+template<typename ProbeGenerator, typename WitnessGenerator>
+auto probable_prime(ProbeGenerator& rng, WitnessGenerator& wng) {
+  return probable_prime([](const auto &x, auto& rnd) { return check_primarity(x, rnd); }, rng, wng);
 }
 
 template <typename I>
@@ -268,7 +276,8 @@ struct rsa_keychain {
   rsa_keychain(const cpp_int &n, const cpp_int &public_key, const cpp_int &private_key) : n(n),
                                                                                           public_key(public_key),
                                                                                           private_key(private_key) {}
-  size_t block_power_of_2() {
+  size_t block_power_of_2() const
+  {
     cpp_int value;
     if (public_key == 0) { value = private_key; }
     else if (private_key == 0) { value = public_key; }
@@ -278,16 +287,19 @@ struct rsa_keychain {
   }
 };
 
-rsa_keychain rsa_key_generation(size_t size) {
+template <size_t Width, typename RandomGenerator>
+rsa_keychain rsa_key_generation(RandomGenerator& rng) {
   typedef cpp_int Integer;
+  bit_generator<RandomGenerator, Width> p_generator(rng);
+  bit_generator<RandomGenerator, Width> w_generator(rng);
   while(true) {
-  Integer p1 = probable_prime(size, size);
-  Integer p2 = probable_prime(size, size);
+  Integer p1 = probable_prime(p_generator, w_generator);
+  Integer p2 = probable_prime(p_generator, w_generator);
   Integer n = p1 * p2;
   Integer phi = (p1 - 1) * (p2 - 1);
-  Integer public_key = random_coprime(phi, [size]() { return rand(size); });
+  Integer public_key = random_coprime(phi, p_generator);
   while (public_key >= phi) {
-    public_key = random_coprime(phi, [size]() { return rand(size); });
+    public_key = random_coprime(phi, p_generator);
   }
   Integer private_key = multiplicative_inverse(public_key, phi);
   if (private_key != 0)
@@ -295,6 +307,7 @@ rsa_keychain rsa_key_generation(size_t size) {
   }
 }
 
+// implement using operator<<
 std::pair<std::string, std::string> save(const rsa_keychain &rsa_data, const std::string &file_name) {
   auto first = file_name + ".public";
   std::ofstream public_file(first);
@@ -323,7 +336,8 @@ cpp_int crypt(cpp_int val, cpp_int n, cpp_int key) {
 }
 
 int main() {
-  auto rsa_triple = rsa_key_generation(512);
+  boost::mt19937 rng(42);
+  auto rsa_triple = rsa_key_generation<512>(rng);
   cpp_int value = 65;
   auto encrypted = crypt(value, rsa_triple.n, rsa_triple.public_key);
   auto decrypted = crypt(encrypted, rsa_triple.n, rsa_triple.private_key);
