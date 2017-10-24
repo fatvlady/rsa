@@ -6,3 +6,6 @@ encryption:
 
 sign:
 	g++ -O2 -std=c++14 program_sign.cpp -o sign
+
+secure_send:
+	g++ -O2 -std=c++14 program_secure.cpp -o secure_send
