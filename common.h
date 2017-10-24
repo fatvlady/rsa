@@ -118,7 +118,7 @@ A power_semigroup(A a, N n, Op op) {
     }
     if (n == 1) return a;
     // Auch
-    return power_accumulate_semigroup(a, op(a, a), half(N{n - 1}), op);
+    return power_accumulate_semigroup(a, op(a, a), half(n - 1), op);
 }
 
 
@@ -327,22 +327,22 @@ struct rsa_keychain {
 rsa_keychain rsa_key_generation(size_t size) {
   // Problem: sometimes private_key == 0
   while(true) {
-  typedef cpp_int Integer;
-  Integer p1 = probable_prime(size, size);
-  Integer p2 = probable_prime(size, size);
-  Integer n = p1 * p2;
-  Integer phi = (p1 - 1) * (p2 - 1);
-  Integer public_key = random_witness(phi, [size]() { return rand(size); });
-  public_key = random_coprime(phi, [size]() { return rand(size); });
-  Integer private_key = multiplicative_inverse(public_key, phi);
-  if (private_key != 0) {
-    #ifdef DEBUG_MODE
-      std::cerr << "p1: " << p1 << std::endl;
-      std::cerr << "p2: " << p2 << std::endl;
-    #endif
+    typedef cpp_int Integer;
+    Integer p1 = probable_prime(size, size);
+    Integer p2 = probable_prime(size, size);
+    Integer n = p1 * p2;
+    Integer phi = (p1 - 1) * (p2 - 1);
+    Integer public_key = random_witness(phi, [size]() { return rand(size); });
+    public_key = random_coprime(phi, [size]() { return rand(size); });
+    Integer private_key = multiplicative_inverse(public_key, phi);
+    if (private_key != 0) {
+      #ifdef DEBUG_MODE
+        std::cerr << "p1: " << p1 << std::endl;
+        std::cerr << "p2: " << p2 << std::endl;
+      #endif
 
-    return rsa_keychain(n, public_key, private_key);
-  }
+      return rsa_keychain(n, public_key, private_key);
+    }
   }
 }
 
