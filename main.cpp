@@ -143,6 +143,32 @@ struct modulo_multiply {
   }
 };
 
+template <typename I>
+bool fermat_test(I n, I witness) {
+    // precondition: 0 < witness < n
+    I remainder(power_semigroup(witness,
+                                I{n - I(1)},
+                                modulo_multiply<I>(n)));
+    return remainder == I(1);
+}
+
+template<typename N>
+N yakobi(N a, N n) {
+  return a * n;
+}
+
+template <typename I, typename N, typename Generator>
+bool solovei_shtrassen(I n, N k, Generator rand) {
+  for (N i = 0; i != k; ++i) {
+    auto value = rand();
+    if (gcd(value, n) != 1) return false;
+    // TODO: finish
+    //if (power_semigroup(p, (n - 1) / 2, modulo_multiply<I>(n)) == p * yakobi(a, n)) return false;
+  }
+  return true;
+}
+
+
 template<typename T>
 std::pair<T, T> factorize(T x, T val) {
   // Bad code, can be better
@@ -213,14 +239,35 @@ Integer random_coprime(Integer x, RandomGenerator rand) {
 }
 
 template<typename Integer, typename RandomGenerator>
+inline
+Integer random_witness(Integer x, RandomGenerator rand) {
+  Integer number = rand();
+  while (number == 0 || number - 1 >= x) number = rand();
+
+  Integer gcd_value = gcd(x, number);
+  if (gcd_value == Integer{1}) {
+    return number;
+  }
+  ++number;
+  return number;
+}
+
+template<typename Integer, typename RandomGenerator>
 bool check_primarity(Integer n, RandomGenerator rand) {
   if (even(n)) { return false; }
   
   std::pair<Integer, Integer> qk = factorize(Integer{n - 1}, Integer{2});
   const constexpr size_t witnesses = 100;
-
+ 
   for (size_t i = 0; i < witnesses; ++i) {
-    Integer w = random_coprime(n, rand);
+    Integer w = random_witness(n, rand);
+    if (!fermat_test(n, w)) {
+      return false;
+    }
+  }
+ 
+  for (size_t i = 0; i < witnesses; ++i) {
+    Integer w = random_witness(n, rand);
     if (!miller_rabin_test(n, qk.first, qk.second, w)) {
       return false;
     }
@@ -279,20 +326,17 @@ struct rsa_keychain {
 };
 
 rsa_keychain rsa_key_generation(size_t size) {
+  // Problem: sometimes private_key == 0
   typedef cpp_int Integer;
-  while(true) {
   Integer p1 = probable_prime(size, size);
   Integer p2 = probable_prime(size, size);
   Integer n = p1 * p2;
   Integer phi = (p1 - 1) * (p2 - 1);
-  Integer public_key = random_coprime(phi, [size]() { return rand(size); });
-  while (public_key >= phi) {
-    public_key = random_coprime(phi, [size]() { return rand(size); });
-  }
+  Integer public_key = random_witness(phi, [size]() { return rand(size); });
+  public_key = random_coprime(phi, [size]() { return rand(size); });
   Integer private_key = multiplicative_inverse(public_key, phi);
-  if (private_key != 0)
+  if (private_key == 0) throw std::string("Bug");
   return rsa_keychain(n, public_key, private_key);
-  }
 }
 
 std::pair<std::string, std::string> save(const rsa_keychain &rsa_data, const std::string &file_name) {
@@ -322,8 +366,9 @@ cpp_int crypt(cpp_int val, cpp_int n, cpp_int key) {
   return power_semigroup(val, key, modulo_multiply<cpp_int>(n));
 }
 
+
 int main() {
-  auto rsa_triple = rsa_key_generation(512);
+  auto rsa_triple = rsa_key_generation(64);
   cpp_int value = 65;
   auto encrypted = crypt(value, rsa_triple.n, rsa_triple.public_key);
   auto decrypted = crypt(encrypted, rsa_triple.n, rsa_triple.private_key);
