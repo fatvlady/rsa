@@ -154,6 +154,7 @@ bool fermat_test(I n, I witness) {
 
 template<typename N>
 N yakobi(N a, N n) {
+  // TODO: Finish
   return a * n;
 }
 
@@ -185,9 +186,7 @@ bool miller_rabin_test(I n, I q, I k, I w) {
     I x = power_semigroup(w, q, mmult);
     if (x == I(1) || x == n - I(1)) return true;
     for (I i(1); i < k; ++i) {
-    
         // invariant x = w^{2^{i-1}q}
-        
         x = mmult(x, x);
         if (x == n - I(1)) return true;
         if (x == I(1))     return false;
@@ -330,6 +329,10 @@ rsa_keychain rsa_key_generation(size_t size) {
   typedef cpp_int Integer;
   Integer p1 = probable_prime(size, size);
   Integer p2 = probable_prime(size, size);
+  #ifdef DEBUG_MODE
+    std::cerr << "p1: " << p1 << std::endl;
+    std::cerr << "p2: " << p2 << std::endl;
+  #endif
   Integer n = p1 * p2;
   Integer phi = (p1 - 1) * (p2 - 1);
   Integer public_key = random_witness(phi, [size]() { return rand(size); });
@@ -342,10 +345,10 @@ rsa_keychain rsa_key_generation(size_t size) {
 std::pair<std::string, std::string> save(const rsa_keychain &rsa_data, const std::string &file_name) {
   auto first = file_name + ".public";
   std::ofstream public_file(first);
-  public_file << std::hex << rsa_data.n << std::endl << rsa_data.public_key;
-  auto second = file_name + ".public";
+  public_file << rsa_data.n << std::endl << rsa_data.public_key;
+  auto second = file_name + ".private";
   std::ofstream private_file(second);
-  private_file << std::hex << rsa_data.n << std::endl << rsa_data.private_key;
+  private_file << rsa_data.n << std::endl << rsa_data.private_key;
   return {first, second};
 }
 
@@ -366,12 +369,7 @@ cpp_int crypt(cpp_int val, cpp_int n, cpp_int key) {
   return power_semigroup(val, key, modulo_multiply<cpp_int>(n));
 }
 
-
-int main() {
-  auto rsa_triple = rsa_key_generation(64);
-  cpp_int value = 65;
-  auto encrypted = crypt(value, rsa_triple.n, rsa_triple.public_key);
-  auto decrypted = crypt(encrypted, rsa_triple.n, rsa_triple.private_key);
-  std::cout << decrypted << std::endl;
-
+auto generate_keys(size_t size, const std::string &name) {
+  auto abonent_a = rsa_key_generation(size);
+  return save(abonent_a, name);
 }
