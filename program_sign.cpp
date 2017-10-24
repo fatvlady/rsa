@@ -15,11 +15,11 @@ int main(int argc, char *argv[]) {
   message >> m;
   auto e = crypt(m, n, private_key);
 
-  if (argv[5] == '0') {
+  if (argv[4][0] == '0') {
     std::ofstream encryption(argv[3]);
     encryption << e << std::endl << m;
-  } else if (argv[5] == '1') {
+  } else if (argv[4][0] == '1') {
     message >> m;
-    std::cout << (raw_message == m) << std::endl;
+    std::cout << ((e == m) ? "Valid" : "Invalid") << std::endl;
   }
 }

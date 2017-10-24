@@ -241,12 +241,10 @@ template<typename Integer, typename RandomGenerator>
 inline
 Integer random_witness(Integer x, RandomGenerator rand) {
   Integer number = rand();
-  while (number == 0 || number - 1 >= x) number = rand();
+  while (number <= 100 || number - 2 >= x) number = rand();
 
   Integer gcd_value = gcd(x, number);
-  if (gcd_value == Integer{1}) {
-    return number;
-  }
+  if (gcd_value == Integer{1}) { return number; }
   ++number;
   return number;
 }
@@ -326,20 +324,24 @@ struct rsa_keychain {
 
 rsa_keychain rsa_key_generation(size_t size) {
   // Problem: sometimes private_key == 0
+  while(true) {
   typedef cpp_int Integer;
   Integer p1 = probable_prime(size, size);
   Integer p2 = probable_prime(size, size);
-  #ifdef DEBUG_MODE
-    std::cerr << "p1: " << p1 << std::endl;
-    std::cerr << "p2: " << p2 << std::endl;
-  #endif
   Integer n = p1 * p2;
   Integer phi = (p1 - 1) * (p2 - 1);
   Integer public_key = random_witness(phi, [size]() { return rand(size); });
   public_key = random_coprime(phi, [size]() { return rand(size); });
   Integer private_key = multiplicative_inverse(public_key, phi);
-  if (private_key == 0) throw std::string("Bug");
-  return rsa_keychain(n, public_key, private_key);
+  if (private_key != 0) {
+    #ifdef DEBUG_MODE
+      std::cerr << "p1: " << p1 << std::endl;
+      std::cerr << "p2: " << p2 << std::endl;
+    #endif
+
+    return rsa_keychain(n, public_key, private_key);
+  }
+  }
 }
 
 std::pair<std::string, std::string> save(const rsa_keychain &rsa_data, const std::string &file_name) {
