@@ -11,26 +11,6 @@ using boost::multiprecision::cpp_int;
 template <typename Rng, size_t BitCount>
 using bit_generator = boost::random::independent_bits_engine<Rng, BitCount, cpp_int>;
 
-template <size_t BitCount, typename Rng>
-cpp_int rand(const Rng& rng)
-{
-    bit_generator<Rng, BitCount> ind_bit_gen(rng);
-    return ind_bit_gen();
-}
-
-cpp_int rand(int n) {
-  const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-  std::random_device rd;
-  std::uniform_int_distribution<size_t> distribution(0, 15);
-  auto k = n / 4;
-  std::string number("0x");
-  number.reserve(k + 2);
-  for (size_t i = 0; i != k; ++i) {
-    number.push_back(hex[distribution(rd)]);
-  }
-  return cpp_int(number);
-}
-
 template<typename E>
 E gcd(E a, E b) {
     E zero(0);
