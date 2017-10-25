@@ -117,8 +117,8 @@ A power_semigroup(A a, N n, Op op) {
         n = half(n);
     }
     if (n == 1) return a;
-    // Auch
-    return power_accumulate_semigroup(a, op(a, a), half(n - 1), op);
+    --n;
+    return power_accumulate_semigroup(a, op(a, a), half(n), op);
 }
 
 
@@ -130,7 +130,7 @@ MultiplicativeSemigroup power_semigroup(MultiplicativeSemigroup a, Integer n) {
         n = half(n);
     }
     if (n == 1) return a;
-    return power_accumulate_semigroup(a, a * a, half(n - 1));
+    return power_accumulate_semigroup(a, a * a, Integer{half(n - 1)});
 }
 
 
