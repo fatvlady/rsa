@@ -229,13 +229,8 @@ template<typename Integer, typename RandomGenerator>
 inline
 Integer random_coprime(Integer x, RandomGenerator rand) {
   Integer number = rand();
-  while (number == 0) number = rand();
-
-  Integer gcd_value = gcd(x, number);
-  if (gcd_value == Integer{1}) {
-    return number;
-  }
-  ++number;
+  Integer one{1};
+  while (number == 0 || gcd(x, number) != one) { number = rand(); }
   return number;
 }
 
@@ -243,11 +238,8 @@ template<typename Integer, typename RandomGenerator>
 inline
 Integer random_witness(Integer x, RandomGenerator rand) {
   Integer number = rand();
-  while (number <= 100 || number - 2 >= x) number = rand();
-
-  Integer gcd_value = gcd(x, number);
-  if (gcd_value == Integer{1}) { return number; }
-  ++number;
+  Integer one{1};
+  while (number < 3 || number - 2 >= x || gcd(x, number) != one) { number = rand(); }
   return number;
 }
 
